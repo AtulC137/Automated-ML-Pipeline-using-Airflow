@@ -1,0 +1,68 @@
+PHASE 0 : Creating folder and setup
+
+1) setting up folder structure :
+
+mlops-project/
+│
+├── airflow/
+│   └── dags/
+│
+├── app/
+│   ├── api/        (FastAPI)
+│   ├── ui/         (Streamlit)
+│
+├── ml/
+│   ├── data/
+│   ├── models/
+│   ├── pipelines/
+│
+├── docker/
+│
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
+
+2) Pull multipe images for AirFlow 
+    👉 we need to pull:
+        - web server
+        - schedular
+        - database
+    👉 docker-compose reads the .yml file and
+        - pulls required images
+        - creates containers
+        - connects them (network)
+        - runs them
+    👉 docker-compose.yml = blueprint
+    👉 docker compose up = build + run system
+        - >> Invoke-WebRequest "https://airflow.apache.org/docs/apache-airflow/3.2.1/docker-compose.yaml" -OutFile "docker-compose.yml"
+        - this command will download .yml file 
+        - if not vscode terminal and then use 
+        - >> curl -LfO 'https://airflow.apache.org/docs/apache-airflow/3.2.1/docker-compose.yaml'
+
+3) whats inside yml :
+    SERVICES or Containers
+        postgres
+        airflow-webserver
+        airflow-scheduler
+        airflow-init
+4) set env variables and run innit
+    - create .env file with :
+        👉 AIRFLOW_UID=50000
+        👉 FERNET_KEY=abcdefghijklmnopqrstuvwxyz123456
+    - init >> docker compose up airflow-init
+        - INIT does : 
+            - creates Airflow database
+            - initializes tables
+            - creates default user
+            - prepares scheduler/webserver
+5) Run compose up 
+    >> docker compose up
+
+1. docker compose up airflow-init   ✅ (one time) airflow-init = installation
+2. docker compose up -d               ✅ (start system) docker compose up = running the app
+
+6) Open and login in Apache airflow
+    - after running compose login in UI
+
+7) stop :
+    >> docker compose down
