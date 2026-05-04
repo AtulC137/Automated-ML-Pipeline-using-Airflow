@@ -1,0 +1,12 @@
+lets run and see how DAG and airflow works!!
+
+🔴 In simple terms
+Write a small pipeline (DAG)
+→ run it
+→ see how Airflow executes tasks
+
+🔴 What you will learn
+what is a DAG
+what is a task
+how tasks run
+how scheduling works (basic)
