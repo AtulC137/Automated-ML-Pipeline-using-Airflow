@@ -1,0 +1,20 @@
+1) Load data in ml/data folder
+
+2) remember:
+
+        🔴 Two future usage modes
+        Mode 1 — ML Engineer mode
+
+        Upload full dataset CSV:
+
+        train new model
+        Mode 2 — End User mode
+
+        Send JSON input:
+
+        {
+        "income": 5.2,
+        "rooms": 6
+        }
+
+        👉 get prediction only
