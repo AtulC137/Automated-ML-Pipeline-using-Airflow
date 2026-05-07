@@ -10,3 +10,27 @@ what is a DAG
 what is a task
 how tasks run
 how scheduling works (basic)
+
+Creating a model of Airflow dag :
+
+1) check if system is ready | docker pull and run all images listed in .yml :
+    >>docker compose up -d 
+    -access UI on : http://localhost:8080/
+
+2) basic_pipeline.py is showing yellow line under packages : 
+    - dont worry you are not running this code inside vscode but inside docker , so it does not matter
+
+3) if  🔴 Problem : DAG not visible in Airflow UI
+    - our file was in mlops-project/airflow/dags/basic_pipeline.py but docker was configured to read mlops-project/dags/  in .yml file. 
+    - solution was to move file.
+    check if file is in Airflow cointainer in Dokcer :
+    >> docker exec -it mlops-project-airflow-scheduler-1 ls /opt/airflow/dags
+    ---> expected output : basic_pipeline.py
+
+4) 🔴 What to do
+
+1️⃣ Find basic_pipeline in airflow ui
+
+2️⃣ Turn ON toggle
+
+3️⃣ Click Trigger DAG
