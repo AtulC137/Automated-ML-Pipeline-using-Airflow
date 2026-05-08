@@ -2,38 +2,24 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
 
-# Task functions
-def start():
-    print("Pipeline started")
+from ml.src.data_ingestion import load_data
 
-def process_data():
-    print("Processing data...")
+# from ml.data_ingestion import load_data
 
-def end():
-    print("Pipeline finished")
+def ingest_data():
+    load_data("/opt/airflow/data/housing.csv")
 
-# DAG definition
+
 with DAG(
     dag_id="basic_pipeline",
-    start_date=datetime(2026, 5, 4),
-    schedule=None,  # manual trigger
-    catchup=False
+    start_date=datetime(2026, 5, 8),
+    schedule=None,
+    catchup=False,
 ) as dag:
 
-    task_start = PythonOperator(
-        task_id="start_task",
-        python_callable=start
+    ingest_task = PythonOperator(
+        task_id="ingest_data",
+        python_callable=ingest_data,
     )
 
-    task_process = PythonOperator(
-        task_id="process_task",
-        python_callable=process_data
-    )
-
-    task_end = PythonOperator(
-        task_id="end_task",
-        python_callable=end
-    )
-
-    # Task flow
-    task_start >> task_process >> task_end
+    ingest_task

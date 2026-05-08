@@ -18,3 +18,211 @@
         }
 
         👉 get prediction only
+
+3) installing ML liberies  in docker container as they are not present on local sytem:
+        - make requirment.txt file
+        - make a Dockerfile file on project root level
+                - add :
+                        FROM apache/airflow:3.2.1
+
+                        COPY requirements.txt .
+
+                        RUN pip install --no-cache-dir -r requirements.txt
+
+        -       modify docker-compose.yml file
+                # In order to add custom dependencies or upgrade provider distributions you can use your extended image.
+                # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
+                # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
+                # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.2.1}
+                build: .
+        
+        - REBUILD CONTAINER :
+                docker compose down
+                docker compose up --build -d
+4) RUN THE TASK : 
+        - mount ml folder : your ml/ folder is not mapped to docker container yet, so it does not find path.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+**************************ERROR FACED  AND DEBUGGING :*************************************************************************************
+# Airflow + Docker + Python Import Debugging Notes
+
+## 1. Problem Faced
+
+Airflow DAG was visible, but task failed with:
+
+ModuleNotFoundError: No module named 'ml'
+
+Later:
+
+FileNotFoundError: No such file or directory: '/opt/airflow/data/housing.csv'
+
+---
+
+# 2. Root Causes
+
+There were multiple issues:
+
+1. Python could not find custom ml package
+2. Docker container could not access dataset
+3. Wrong project folder structure
+4. Wrong relative paths
+
+---
+
+# 3. Correct Project Structure
+
+D:\Projects\AutoML\mlops-project
+
+├── dags/
+│   └── basic_pipeline.py
+│
+├── ml/
+│   ├── __init__.py
+│   └── src/
+│       ├── __init__.py
+│       └── data_ingestion.py
+│
+├── data/
+│   └── housing.csv
+│
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+
+---
+
+# 4. Why Mounting is Needed
+
+Docker containers are isolated.
+
+Files from local machine are NOT automatically visible inside container.
+
+So we mounted folders using docker-compose.yml.
+
+Example:
+
+volumes:
+  - ./ml:/opt/airflow/ml
+  - ./data:/opt/airflow/data
+
+Meaning:
+
+Local Folder                -> Container Folder
+./ml                        -> /opt/airflow/ml
+./data                      -> /opt/airflow/data
+
+---
+
+# 5. How to Check if Mounting Worked
+
+Run:
+
+docker exec -it mlops-project-airflow-scheduler-1 ls /opt/airflow
+
+Expected output:
+
+config  dags  data  logs  ml  plugins
+
+Then check inside folder:
+
+docker exec -it mlops-project-airflow-scheduler-1 ls /opt/airflow/data
+
+Expected:
+
+housing.csv
+
+---
+
+# 6. Why PYTHONPATH was Needed
+
+Even after mounting, Python could not import:
+
+from ml.src.data_ingestion import load_data
+
+Because Python did not search /opt/airflow automatically.
+
+So we added:
+
+PYTHONPATH=/opt/airflow
+
+inside .env file.
+
+This tells Python:
+
+"Search /opt/airflow for modules/packages"
+
+---
+
+# 7. Why __init__.py was Needed
+
+Python treats folders as packages only if __init__.py exists.
+
+Created:
+
+ml/__init__.py
+ml/src/__init__.py
+
+Without these files:
+import statements fail.
+
+---
+
+# 8. Correct DAG Code
+
+from ml.src.data_ingestion import load_data
+
+def ingest_data():
+    load_data("/opt/airflow/data/housing.csv")
+
+---
+
+# 9. Important Learning
+
+Problem Type                 -> Fix
+------------------------------------------------
+Container cannot see files   -> Docker Mounting
+Python cannot import module  -> PYTHONPATH
+Folder not treated package   -> __init__.py
+CSV not found                -> Correct mounted path
+
+---
+
+# 10. Useful Commands
+
+Start containers:
+docker compose up -d
+
+Restart:
+docker compose restart
+
+Stop:
+docker compose down
+
+Rebuild image:
+docker compose up --build -d
+
+Check containers:
+docker ps
+
+Check mounted files:
+docker exec -it mlops-project-airflow-scheduler-1 ls /opt/airflow
+
+Check logs:
+docker compose logs airflow-scheduler

@@ -16,6 +16,8 @@ Creating a model of Airflow dag :
 1) check if system is ready | docker pull and run all images listed in .yml :
     >>docker compose up -d 
     -access UI on : http://localhost:8080/
+        Username: airflow
+        Password: airflow
 
 2) basic_pipeline.py is showing yellow line under packages : 
     - dont worry you are not running this code inside vscode but inside docker , so it does not matter
