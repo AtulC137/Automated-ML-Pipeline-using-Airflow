@@ -1,21 +1,60 @@
+"""
+Generic Data Ingestion Module
+
+Supports:
+1. CSV files
+2. JSON files
+
+Author: Atul
+"""
+
+import os
 import pandas as pd
-from pathlib import Path
 
 
-def load_data(file_path: str):
+def load_data(file_path):
+    """
+    Load dataset from CSV or JSON file.
 
-    file_extension = Path(file_path).suffix
+    Parameters
+    ----------
+    file_path : str
+        Path to dataset file.
 
-    if file_extension == ".csv":
-        data = pd.read_csv(file_path)
+    Returns
+    -------
+    pandas.DataFrame
+        Loaded dataframe.
 
-    elif file_extension == ".json":
-        data = pd.read_json(file_path)
+    Raises
+    ------
+    FileNotFoundError
+        If file does not exist.
+
+    ValueError
+        If unsupported file format is used.
+    """
+
+    # Check file existence
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(
+            f"File not found: {file_path}"
+        )
+
+    # CSV support
+    if file_path.endswith(".csv"):
+        df = pd.read_csv(file_path)
+
+    # JSON support
+    elif file_path.endswith(".json"):
+        df = pd.read_json(file_path)
 
     else:
-        raise ValueError(f"Unsupported file format: {file_extension}")
+        raise ValueError(
+            "Unsupported file format. Use CSV or JSON."
+        )
 
-    print(f"Dataset loaded successfully: {file_path}")
-    print(f"Shape: {data.shape}")
+    print("Dataset loaded successfully")
+    print(f"Shape: {df.shape}")
 
-    return data
+    return df

@@ -48,3 +48,26 @@ Current progress:
 
     can crash pipeline later.
 
+4) REWRITTING GENRIC CODE FOR ALL FIEL:
+    - injsution handels -> json, csv
+    - data validation -> handels for all datasets not just the one we use
+    - data preprocessing -> handel all types of files to preprocess
+
+Current status:
+
+✅ Data Ingestion
+✅ Data Validation
+✅ Data Preprocessing
+⬜ Feature Engineering
+
+5) create feature_engineering.py and data_splitting.py
+
+Proper ML order is usually:
+
+1. ingest
+2. validate
+3. clean data
+4. fit feature engineering on train
+5. split train/test
+6. save artifacts
+
