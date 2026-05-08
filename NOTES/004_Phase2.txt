@@ -1,0 +1,50 @@
+Current progress:
+
+✅ Ingestion
+⬜ Validation
+⬜ Preprocessing
+⬜ Feature Engineering
+
+1) CREATE data_preprocessing.py inside ml/src
+
+    🔴 Important Architecture Decision
+    We should NOT pass pandas dataframe between Airflow tasks directly.
+    Instead:
+    save outputs to files
+    This is production style.
+
+    🔴 So preprocessing task will:
+    INPUT:
+    /opt/airflow/data/housing.csv
+    OUTPUT:
+    /opt/airflow/data/processed/
+    with:
+
+    X_train.csv
+    X_test.csv
+    y_train.csv
+    y_test.csv
+
+
+2) Create: data/processed/
+    data/
+    ├── housing.csv
+    └── processed/
+
+3) Data Validation
+
+    Now we add:
+    validation layer
+    before preprocessing.
+
+    🔴 Why validation matters
+
+    Without validation:
+
+    wrong CSV format
+    missing target column
+    empty dataset
+    schema mismatch
+
+    can crash pipeline later.
+
