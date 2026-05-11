@@ -3,3 +3,21 @@ __pycache__/
 *.pyc
 .env
 logs/
+
+# Python
+__pycache__/
+*.pyc
+
+# Airflow
+logs/
+
+# ML Artifacts
+ml/artifacts/
+data/
+
+# Environment
+.env
+venv/
+
+# OS
+.DS_Store

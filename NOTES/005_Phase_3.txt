@@ -1,0 +1,65 @@
+🔴 Goal of this phase
+
+Train ML model using:
+
+X_train.pkl
+y_train.csv
+
+Then save:
+
+trained_model.pkl
+
+inside:
+
+ml/artifacts/
+
+1) 
+    - create model_training.py
+    - 🔴 What this does
+        Loads transformed features
+        ↓
+        Trains Linear Regression
+        ↓
+        Saves trained model
+
+2)  Model Evaluation
+
+        Evaluate how good the trained model is.
+
+        We’ll use:
+
+        X_test.pkl
+        y_test.csv
+        trained_model.pkl
+        🔴 What evaluation task will do
+        Load trained model
+        ↓
+        Predict on test data
+        ↓
+        Calculate metrics
+        ↓
+        Save evaluation results
+
+        🔴 Metrics for regression
+
+            We’ll likely use:
+
+            MAE
+            MSE
+            RMSE
+            R² Score
+        🔴 Output
+
+        We’ll save metrics inside:
+
+        ml/artifacts/metrics.json
+
+        Example:
+
+        {
+        "mae": 50000,
+        "rmse": 70000,
+        "r2_score": 0.81
+        }
+
+3) model select:
