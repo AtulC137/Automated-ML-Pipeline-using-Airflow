@@ -21,3 +21,14 @@ venv/
 
 # OS
 .DS_Store
+
+# MLflow
+mlflow_data/
+
+# ML models
+ml/artifacts/
+
+# Python
+venv/
+__pycache__/
+*.pyc
