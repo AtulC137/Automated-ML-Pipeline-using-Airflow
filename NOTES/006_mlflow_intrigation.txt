@@ -1,0 +1,330 @@
+MLflow Integration Notes — Airflow MLOps Project
+Goal
+Integrate MLflow into existing Airflow ML pipeline for:
+
+
+experiment tracking
+
+
+parameter logging
+
+
+metric logging
+
+
+model artifact storage
+
+
+model comparison
+
+
+without tightly coupling Airflow and MLflow.
+
+Existing Architecture Before MLflow
+Airflow DAG    ↓Data Ingestion    ↓Feature Engineering    ↓Hyperparameter Tuning    ↓Best Model Saved
+Everything was running inside Airflow containers.
+
+Problem We Wanted To Solve
+Before MLflow:
+
+
+no experiment tracking
+
+
+no run history
+
+
+no model comparison UI
+
+
+no metrics dashboard
+
+
+no artifact versioning
+
+
+We only saved:
+best_model.pklmodel_scores.json
+locally.
+
+Core Architecture Decision
+Important Understanding
+Airflow and MLflow do DIFFERENT jobs.
+ToolResponsibilityAirflowworkflow orchestrationMLflowexperiment tracking
+So:
+
+
+Airflow does NOT need internal filesystem access to MLflow
+
+
+MLflow does NOT control DAGs
+
+
+They communicate through HTTP API.
+This is production-style architecture.
+
+Final Production Architecture
+Airflow Container    |    | HTTP Requests    ↓MLflow Server Container    |    ↓Artifact Storage (mlflow_data/)
+
+Why Separate Containers?
+Because:
+
+
+loose coupling
+
+
+scalable
+
+
+production ready
+
+
+easier debugging
+
+
+easier deployment
+
+
+independent services
+
+
+Very common in real MLOps systems.
+
+Why HTTP API Communication?
+When we wrote:
+mlflow.set_tracking_uri(    "http://mlflow:5000")
+Airflow sends REST API requests to MLflow server.
+Examples:
+
+
+create experiment
+
+
+create run
+
+
+log metric
+
+
+log parameter
+
+
+upload model artifact
+
+
+This communication happens over Docker network.
+No FastAPI required.
+MLflow already provides its own API server.
+
+Step 1 — Create MLflow Service in Docker
+We added a separate service inside docker-compose.yml.
+Why?
+Because MLflow must run continuously as a server.
+
+Final MLflow Service
+mlflow:  image: ghcr.io/mlflow/mlflow:latest  container_name: mlflow-server  environment:    MLFLOW_SERVER_ALLOWED_HOSTS: "*"  ports:    - "5000:5000"  volumes:    - ./mlflow_data:/mlflow  command: >    mlflow server    --host 0.0.0.0    --port 5000    --backend-store-uri sqlite:///mlflow.db    --artifacts-destination /mlflow
+
+Why Each Part Is Needed
+1. Port Mapping
+ports:  - "5000:5000"
+Allows browser access:
+http://localhost:5000
+
+2. Allowed Hosts Fix
+environment:  MLFLOW_SERVER_ALLOWED_HOSTS: "*"
+Fixes:
+Invalid Host header - possible DNS rebinding attack detected
+Why?
+Because Airflow accesses MLflow using:
+http://mlflow:5000
+inside Docker network.
+
+3. Shared Volume
+volumes:  - ./mlflow_data:/mlflow
+VERY IMPORTANT.
+Without this:
+
+
+model artifacts fail to save
+
+
+permission errors happen
+
+
+data disappears after container restart
+
+
+
+Why We Created mlflow_data/
+We manually created:
+mlflow_data/
+inside project root.
+Why?
+Because MLflow needs persistent storage for:
+
+
+model.pkl
+
+
+MLmodel
+
+
+requirements.txt
+
+
+environment files
+
+
+experiment metadata
+
+
+
+Major Error We Faced
+Error
+PermissionError: [Errno 13] Permission denied: '/mlflow'
+Cause
+MLflow artifact path existed inside container only.
+No mounted writable host directory.
+Fix
+Mount host volume:
+volumes:  - ./mlflow_data:/mlflow
+
+Step 2 — Install MLflow In Airflow Image
+Added to requirements.txt:
+mlflow
+Why?
+Because Airflow task itself executes MLflow logging code.
+Without MLflow installed inside Airflow container:
+import mlflow
+would fail.
+
+Step 3 — Add MLflow Tracking Code
+Inside:
+hyperparameter_tuning.py
+we added:
+import mlflowimport mlflow.sklearn
+
+Step 4 — Connect Airflow To MLflow
+mlflow.set_tracking_uri(    "http://mlflow:5000")
+Why?
+Inside Docker Compose:
+
+
+service name = hostname
+
+
+So container airflow-worker
+can contact container mlflow.
+
+Step 5 — Create Experiment
+mlflow.set_experiment(    "housing_prediction")
+Creates experiment dashboard in MLflow UI.
+
+Step 6 — Create Runs
+Inside model loop:
+with mlflow.start_run(    run_name=model_name):
+Each model becomes separate MLflow run.
+Example:
+
+
+LinearRegression
+
+
+DecisionTree
+
+
+RandomForest
+
+
+
+Step 7 — Log Parameters
+mlflow.log_params(    grid_search.best_params_)
+Stores:
+max_depthn_estimatorsmin_samples_split
+etc.
+
+Step 8 — Log Metrics
+mlflow.log_metric(    "r2_score",    score,)
+Stores evaluation score.
+
+Step 9 — Log Model Artifact
+mlflow.sklearn.log_model(    tuned_model,    name=model_name,)
+Uploads trained model to MLflow artifact storage.
+
+Final MLflow UI Result
+Inside browser:
+http://localhost:5000
+we can see:
+
+
+experiments
+
+
+runs
+
+
+parameters
+
+
+metrics
+
+
+artifacts
+
+
+model files
+
+
+
+Important Learning About Filesystems
+Wrong Assumption Initially
+We thought:
+
+
+Airflow and MLflow need same filesystem
+
+
+Actually no.
+They only need:
+
+
+network communication
+
+
+MLflow-managed artifact storage
+
+
+This is cleaner architecture.
+
+GitHub Issue We Faced
+Error
+model.pkl exceeds GitHub file size limit
+Because MLflow stores trained models inside:
+mlflow_data/
+
+Fix
+Added to .gitignore
+mlflow_data/ml/artifacts/
+Why?
+Artifacts should NEVER go to GitHub in production.
+Usually stored in:
+
+
+S3
+
+
+GCS
+
+
+Azure Blob
+
+
+MinIO
+
+
+
+Important Production Concepts Learned
+ConceptMeaningOrchestrationhandled by AirflowExperiment Trackinghandled by MLflowService CommunicationHTTP APIArtifact Storagemounted volumeContainer NetworkingDocker internal DNSPersistenceDocker volumesLoose Couplingservices independent
+
+Final Production Flow
+Airflow DAG Triggered        ↓Hyperparameter Tuning Starts        ↓Airflow calls MLflow API        ↓MLflow creates experiment run        ↓Metrics logged        ↓Parameters logged        ↓Model artifact uploaded        ↓Artifacts stored in mlflow_data/        ↓Results visible in MLflow UI
