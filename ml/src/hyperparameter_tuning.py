@@ -6,6 +6,7 @@ This module:
 2. Tunes multiple machine learning models
 3. Selects best model
 4. Saves best model and metrics
+5. Logs experiments to MLflow
 
 Author: Atul
 """
@@ -14,6 +15,8 @@ import json
 import os
 
 import joblib
+import mlflow
+import mlflow.sklearn
 import pandas as pd
 
 from sklearn.ensemble import RandomForestRegressor
@@ -46,6 +49,16 @@ def tune_models():
     )
 
     print("Datasets loaded successfully")
+
+    # Connect to MLflow server
+    mlflow.set_tracking_uri(
+        "http://mlflow:5000"
+    )
+
+    # Create / set experiment
+    mlflow.set_experiment(
+        "housing_prediction"
+    )
 
     # Models and parameter grids
     models = {
@@ -82,45 +95,70 @@ def tune_models():
 
         print(f"Tuning {model_name}")
 
-        grid_search = GridSearchCV(
-            estimator=config["model"],
-            param_grid=config["params"],
-            cv=3,
-            scoring="r2",
-            n_jobs=-1,
-        )
+        with mlflow.start_run(
+            run_name=model_name
+        ):
 
-        # Train + tune
-        grid_search.fit(
-            X_train,
-            y_train.values.ravel(),
-        )
+            grid_search = GridSearchCV(
+                estimator=config["model"],
+                param_grid=config["params"],
+                cv=3,
+                scoring="r2",
+                n_jobs=-1,
+            )
 
-        # Best tuned model
-        tuned_model = grid_search.best_estimator_
+            # Train + tune
+            grid_search.fit(
+                X_train,
+                y_train.values.ravel(),
+            )
 
-        # Predict
-        predictions = tuned_model.predict(X_test)
+            # Best tuned model
+            tuned_model = grid_search.best_estimator_
 
-        # Evaluate
-        score = r2_score(
-            y_test,
-            predictions,
-        )
+            # Predict
+            predictions = tuned_model.predict(
+                X_test
+            )
 
-        model_scores[model_name] = {
-            "r2_score": float(score),
-            "best_params": grid_search.best_params_,
-        }
+            # Evaluate
+            score = r2_score(
+                y_test,
+                predictions,
+            )
 
-        print(f"{model_name} Score: {score}")
-        print(f"Best Params: {grid_search.best_params_}")
+            model_scores[model_name] = {
+                "r2_score": float(score),
+                "best_params": grid_search.best_params_,
+            }
 
-        # Track best model
-        if score > best_score:
-            best_score = score
-            best_model = tuned_model
-            best_model_name = model_name
+            print(f"{model_name} Score: {score}")
+            print(
+                f"Best Params: {grid_search.best_params_}"
+            )
+
+            # Log parameters
+            mlflow.log_params(
+                grid_search.best_params_
+            )
+
+            # Log metric
+            mlflow.log_metric(
+                "r2_score",
+                score,
+            )
+
+            # Log model
+            mlflow.sklearn.log_model(
+                tuned_model,
+                model_name,
+            )
+
+            # Track best model
+            if score > best_score:
+                best_score = score
+                best_model = tuned_model
+                best_model_name = model_name
 
     print(f"Best Model: {best_model_name}")
     print(f"Best Score: {best_score}")
